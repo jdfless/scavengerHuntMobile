@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>xo</title>
+		<meta name="viewport" content="initial-scale=1, width=device-width">
+		<link href='http://fonts.googleapis.com/css?family=Indie+Flower' rel='stylesheet' type='text/css'>
+		<link href='http://fonts.googleapis.com/css?family=Cabin+Sketch' rel='stylesheet' type='text/css'>
+		<link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+		<script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+		<script>
+			$(function (){
+				var clue = 0;
+				$('#begin').on('click', function(){
+					$.mobile.changePage($('#mainPage'), 'fade');
+				});
+				$('#findMe').on('click', function(){
+					getLocation();
+					function getLocation(){
+						if (navigator.geolocation){
+							navigator.geolocation.getCurrentPosition(getCoords, errorHandler, {enableHighAccuracy: true});
+						}
+						else{
+							alert("Geolocation not available.");
+						}
+					}
+					function getCoords(position){
+						var lat = position.coords.latitude;
+						var lng = position.coords.longitude;
+						var accuracy = position.coords.accuracy;
+						var close = 0;
+
+						//calculate distance between points
+						//lat = evens, long = odds, order = cargyard, 
+						var destArray = [
+							48.50427120, -122.82664418, 	//car graveyard
+							48.50936623, -122.82519780, 	//sheep hill
+							48.51501530, -122.82870043, 	//gazebo
+							48.51374736, -122.83251553, 	//end of sylvan dock
+							48.50895132, -122.83009241]; 	//tree overhanging water SB
+						var latI = clue;
+						var lngI = clue + 1;
+						distLeft = calcDistance(destArray[latI], lat, destArray[lngI], lng);
+						goDirection = findDirection(destArray[latI], lat, destArray[lngI], lng);
+						dm = distLeft * 1000;
+						if (dm < 15){
+							close = 1;
+						}
+						var meters = 0;
+						var distanceStr = "";
+						if (dm >= 10000){
+							distanceStr = distLeft.toFixed(2) + " km";
+						}
+						else{
+							meters = 1;
+							distanceStr = parseInt(dm, 10) + " m";
+						}
+
+						var myCoords = readLatLong(lat, lng);
+						lat = myCoords[0];
+						lng = myCoords[1];
+						var destCoords = readLatLong(destArray[latI], destArray[lngI]);
+						destLat = destCoords[0];
+						destLng = destCoords[1];
+
+						if (close === 1){
+							$('#foundIt').show();
+						}
+						$('#latlng').html("Your lat: " + lat + "<br>Your long: " + lng);
+						$('#distRemaining').html("Distance left: " + distanceStr + "<hr>Destination at:<br>" + destLat + "<br>" + destLng + "<br>" + goDirection);
+					}
+					function findDirection(lat2, lat1, lng2, lng1){
+						var north = 0;
+						var east = 0;
+						if (lat2 - lat1 > .0001){
+							north = 1;
+						}
+						else if (lat2 - lat1 < -.0001){
+							north = -1;
+						}
+
+						if (lng2 - lng1 > .0001){
+							east = 1;
+						}
+						else if (lng2 - lng1 < -.0001){
+							east = -1;
+						}
+
+						var heading = "";
+						if (north === 1 && east === 1){
+							heading = "(Head North-East)";
+						}
+						else if (north === 1 && east === 0){
+							heading = "(Head North)";
+						}
+						else if (north === 1 && east === -1){
+							heading = "(Head North-West)";
+						}
+						else if (north === 0 && east === 1){
+							heading = "(Head East)";
+						}
+						else if (north === 0 && east === 0){
+							heading = "(You're close, search!)";
+						}
+						else if (north === 0 && east === -1){
+							heading = "(Head West)";
+						}
+						else if (north === -1 && east === 1){
+							heading = "(Head South-East)";
+						}
+						else if (north === -1 && east === 0){
+							heading = "(Head South)";
+						}
+						else if (north === -1 && east === -1){
+							heading = "(Head South-West)";
+						}
+						return heading;
+					}
+					function readLatLong(lat, lng){
+						var latPos = "";
+						if(lat > 0)
+							latPos = "N";
+						else if(lat < 0)
+							latPos = "S";
+
+						var longPos = "";
+						if(lng > 0)
+							longPos = "E";
+						else if(lng < 0)
+							longPos = "W";
+
+						lat = Math.abs(lat);
+						lng = Math.abs(lng);
+						console.log(lat);
+						console.log(lng);
+
+						var latSplit = "" + lat;
+						var lngSplit = "" + lng;
+						var latRnd = truncate(latSplit);
+						var lngRnd = truncate(lngSplit);
+
+						latStr = latRnd + "&deg; " + latPos;
+						lngStr = lngRnd + "&deg; " + longPos;
+						return [latStr, lngStr];
+					}
+					function truncate(str){
+						var res = str.split(".");
+						var dec = res[1];
+						if (dec.length > 8){
+							dec = dec.slice(0,8) 
+						}
+						var complete = res[0] + "." + dec;
+						return complete;
+					}
+					function calcDistance(lat2, lat1, lng2, lng1){
+						/*to get distance - take first get distLong and distLat (lon2-lon1 and lat2-lat1)
+						a = (Math.pow(Math.sin(distLat/2),2) + Math.cos(lat1) * cos(lat2) * Math.pow(Math.sin(distLong/2),2))
+						c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+						d = 6370 * c; //not 6370 is R (radius) of earth in km
+						*/
+						var lt1 = convertRadians(lat1);
+						var lt2 = convertRadians(lat2);
+						var ln1 = convertRadians(lng1);
+						var ln2 = convertRadians(lng2);
+
+						var R = 6370; //radius of earth in km estimate at 48 lat
+						var dLat = lt2 - lt1;
+						var dLng = ln2 - ln1;
+						var a = Math.pow(Math.sin(dLat/2),2) + Math.cos(lt1) * Math.cos(lt2) * Math.pow(Math.sin(dLng/2),2);
+						var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+						var d = R * c;
+						return d; //in kilometers
+					}
+					function convertRadians(deg){
+						rad = deg * Math.PI/180;
+						return rad;
+					}
+					function errorHandler(err){
+						alert("Error code: " + err.code);
+					}
+				});
+				$('#foundIt').on('click', function(){
+					$('#foundIt').hide();
+					if (clue < 8){
+						clue += 2;
+					}
+					var showClue = clue / 2 + 1;
+					$('#latlng').html("keep up the good work! on to clue " + showClue);
+					$('#distRemaining').html("");
+					setClueText(clue);
+				});
+				$('#changeClue').on('submit', function(){
+					clue = parseInt($('#clueNumber').val());
+					setClueText(clue);
+					$('#foundIt').hide();
+					var showClue = clue / 2 + 1;
+					$('#latlng').html("the clue has been set to clue " + showClue);
+					$('#distRemaining').html("");
+					return false;
+				});
+				function setClueText(clue){
+					if (clue === 0){
+						$('#clueText').html("<u>clue one</u><br>a path where green life<br>hides industrial decayy<br>metal meets nature");
+					}
+					else if (clue === 2){
+						$('#clueText').html("<u>clue two</u><br>below islands top<br>each days crepuscular light<br>watched by those in white");
+					}
+					else if (clue === 4){
+						$('#clueText').html("<u>clue three</u><br>at the age old pond<br>a frog leaps into water<br>a deep resonance");
+					}
+					else if (clue === 6){
+						$('#clueText').html("<u>clue four</u><br>walk on dark water<br>go plunge into briny depths<br>at the end, near Frost");
+					}
+					else if (clue === 8){
+						$('#clueText').html("<u>clue five</u><br>impossibly here<br>yet resolute, enduring<br>my red light guides you");
+					}
+				}
+			});
+		</script>
+	</head>
+	<body style="font-family: 'Indie Flower';">
+	<div data-role="page" id="startPage">
+		<div class="ui-content" role="main">
+			<div id="startButton">
+				<br><br><br><br>
+				<button id="begin" class="ui-btn ui-shadow ui-corner-all" style="font-family: 'Indie Flower'; background: #E77471; color: white; font-weight: normal;">let's begin.</button>
+			</div>
+		</div>
+	</div>
+	<div data-role="page" id="mainPage">
+		<div data-role="panel" id="thePanel" data-display="push">
+			<div id="clueText" style="text-align: center; font-size: 1.33em;"><u>clue one</u><br>a path where green life<br>hides industrial decay<br>metal meets nature</div>
+			<hr>
+			<p style="text-align: center;"><br><br><br><br><br><br><br><br><br><br>Use this to manually set the clue if something strange happens!</p>
+			<form id="changeClue">
+				<select id="clueNumber" data-mini="true">
+					<option value="0">Clue 1</option>
+					<option value="2">Clue 2</option>
+					<option value="4">Clue 3</option>
+					<option value="6">Clue 4</option>
+					<option value="8">Clue 5</option>
+				</select>
+				<input id="submitButton" type="submit" value="Go to this clue" data-mini="true" style="background: #FF00FF;">
+			</form>
+		</div>
+		<div data-role="header" id="theHeader" style="font-family: 'Cabin Sketch'; font-size: 1.1em;">
+			<a href="#thePanel" data-icon="info" data-iconpos="notext" style="background: #F62817;"></a>
+			<h6>Scavenger Hunt!</h6>
+		</div>
+		<div class="ui-content" role="main">
+			<div id="locationDiv" style="font-size:1.65em;">
+				<button id="findMe" class="ui-btn ui-shadow ui-corner-all" style="font-family: 'Indie Flower'; background: #4E9258; color: white; font-weight: normal;">where am i?</button>
+				<div id="latlng" style="text-align: center;"></div>
+				<div id="distRemaining" style="text-align: center;"></div>
+			</div>
+			<div id="foundIt" style="display: none;">
+				<button id="findMe" class="ui-btn ui-shadow ui-corner-all" style="font-family: 'Indie Flower'; background: #46C7C7; color: white; font-weight: normal;">i found it!</button>
+			</div>
+		</div>
+	</div>
+	</body>
+</html>
