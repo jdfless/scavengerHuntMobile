@@ -153,11 +153,7 @@
 						return complete;
 					}
 					function calcDistance(lat2, lat1, lng2, lng1){
-						/*to get distance - take first get distLong and distLat (lon2-lon1 and lat2-lat1)
-						a = (Math.pow(Math.sin(distLat/2),2) + Math.cos(lat1) * cos(lat2) * Math.pow(Math.sin(distLong/2),2))
-						c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
-						d = 6370 * c; //not 6370 is R (radius) of earth in km
-						*/
+						//this function was not written by me, I only converted it to javascript
 						var lt1 = convertRadians(lat1);
 						var lt2 = convertRadians(lat2);
 						var ln1 = convertRadians(lng1);
